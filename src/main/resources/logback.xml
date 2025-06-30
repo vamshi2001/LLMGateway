@@ -1,0 +1,42 @@
+<configuration scan="true" scanPeriod="30 minutes">
+
+	<property name="USE_CUSTOM_LOGGING" value="true"/>
+	
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="CUSTOM_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder class="com.api.hub.chatbot.CustomConsoleEncoder" />
+	</appender>
+	
+	<appender name="DAILY_FILE_APPENDER" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/chatbot.log</file>
+
+        <!-- Daily Rolling Policy -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/chatbot-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory> <!-- Retain logs for 7 days -->
+        </rollingPolicy>
+
+        <!-- Custom Encoder for Formatting -->
+        <encoder class="com.api.hub.chatbot.CustomFileEncoder" />
+    </appender>
+    
+    
+    <if condition='"${USE_CUSTOM_LOGGING}" == "true"'>
+	    <logger name="chat_data" level="DEBUG" additivity="false">
+	        <appender-ref ref="DAILY_FILE_APPENDER" />
+	    </logger>
+	</if>
+	<if condition='"${USE_CUSTOM_LOGGING}" == "true"'>
+	    <logger name="com.api.hub" level="DEBUG" additivity="false">
+	        <appender-ref ref="CONSOLE" />
+	    </logger>
+	</if>
+	<root level="info">
+		<appender-ref ref="CUSTOM" /> 
+	</root>
+</configuration>
