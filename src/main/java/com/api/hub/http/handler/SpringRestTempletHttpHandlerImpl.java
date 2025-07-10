@@ -30,7 +30,8 @@ import org.springframework.web.client.RestTemplate;
 import com.api.hub.exception.APICallException;
 import com.api.hub.exception.ApiHubException;
 import com.api.hub.exception.AuthenticationException;
-import com.api.hub.exception.GenericException;
+import com.api.hub.exception.InternalServerException;
+import com.api.hub.exception.NetworkOrTimeoutException;
 import com.api.hub.gateway.constants.MarkerConstants;
 import com.api.hub.http.HttpHandler;
 import com.api.hub.http.HttpRequest;
@@ -136,11 +137,32 @@ public class SpringRestTempletHttpHandlerImpl implements HttpHandler, MarkerCons
 		
 	}
 	private <Res, Req> ResponseHolder<Res> processRequest(HttpRequest<Res, Req> request) throws ApiHubException{
-		String endpoint = getEndpoint(request);
+		if (request.getAuthetication() == null) {
+			throw new InputException("gateway-1002-api", "Authentication handler is missing in HttpRequest", "Request setup error: Authentication handler not provided.");
+		}
+		if (request.getAuthetication().getHeaders() == null) {
+			throw new InputException("gateway-1002-api", "Headers from authentication handler are missing in HttpRequest", "Request setup error: Headers from authentication handler not provided.");
+		}
+		request.setHeaders(request.getAuthetication().getHeaders()); // Must be called after null checks
+
+		if (request.getHostReslover() == null) {
+			throw new InputException("gateway-1002-api", "Host resolver is missing in HttpRequest", "Request setup error: Host resolver not provided.");
+		}
 		HostReslover hosts = request.getHostReslover();
 		Iterator<String> hostsIter = hosts.getIter();
-		request.setHeaders(request.getAuthetication().getHeaders());
+		if (hostsIter == null) {
+		    throw new InternalServerException("gateway-8002-api", "Host resolver returned a null iterator", "Internal error: Host resolver provided invalid data.");
+		}
+
+		if (request.getHttpMethod() == null) {
+            throw new InputException("gateway-1002-api", "HTTP method is missing in HttpRequest", "Request setup error: HTTP method not provided.");
+        }
+        String endpoint = getEndpoint(request);
+
 		if(request.isBackOffEnabled()) {
+			if (request.getBackoff() == null) {
+				throw new InputException("gateway-1002-api", "BackOff strategy is missing in HttpRequest when backOff is enabled", "Request setup error: BackOff strategy not provided.");
+			}
 			BackOff backOff = request.getBackoff();
 			BackOffExecution execution = backOff.start();
 			long next = execution.nextBackOff();
@@ -154,26 +176,37 @@ public class SpringRestTempletHttpHandlerImpl implements HttpHandler, MarkerCons
 					ResponseEntity<Res> response = handler.process(url+endpoint, request.getRequestBody(), request.getSpringHeaders(), restTemplate, request.getResponseClass(), request.getHttpMethod());
 					return new ResponseHolder<Res>(true, null, response);
 				} catch (ApiHubException e) {
-					if(e instanceof AuthenticationException) {
+					if(e instanceof AuthenticationException) { // Handled by SpringRestTempletHandler.wrap
 						throw e;
 					}else if (e instanceof APICallException) {
-						if(e.getErrorCode().equals("3001-api-hub")) {
+						// Specific APICallExceptions that should stop retries (e.g., 404 Not Found)
+						if ("gateway-3001-api".equals(e.getErrorCode())) { // Already updated format
 							throw e;
 						}
+						// Other APICallExceptions might be retriable (e.g. temporary server errors)
+					} else if (e instanceof NetworkOrTimeoutException) {
+						// Network errors are generally retriable
 					}
-					log.error(EXTERNAL_API,"error occured while call api " + url );
+					// For other ApiHubException types, or APICallExceptions not specifically handled above, log and continue retry
+					log.error(EXTERNAL_API,"Error occurred while calling API " + url + ", error code: " + (e.getErrorCode() != null ? e.getErrorCode() : "N/A") + ". Retrying if possible.", e);
 				}
-				next = execution.nextBackOff();
+
+				if (BackOffExecution.STOP == next) { // Check if it was the last attempt
+					break;
+				}
+
 				try {
 					Thread.sleep(next);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+				} catch (InterruptedException ie) {
+					Thread.currentThread().interrupt();
+					throw new InternalServerException("gateway-8005-api", "Thread interrupted during backoff delay while calling " + url, "The operation was interrupted.", ie);
 				}
+				next = execution.nextBackOff();
 			}
-			throw new APICallException("3003-api-hub", "unable to call service "  + hosts.getAllURLS(), "");
+			// If loop finishes, all retries failed
+			throw new NetworkOrTimeoutException("gateway-7002-api", "Unable to call service "  + hosts.getAllURLS() + " after multiple retries.", "The external service is currently unavailable after multiple attempts.", null);
 			
-		}else {
+		}else { // No backoff enabled
 			try {
 				String url = hostsIter.next();
 				ResponseEntity<Res> response = handler.post(url+endpoint, request.getRequestBody(), request.getSpringHeaders(), restTemplate, request.getResponseClass());
@@ -201,22 +234,32 @@ public class SpringRestTempletHttpHandlerImpl implements HttpHandler, MarkerCons
 	@Override
 	public <Res> ResponseHolder<Res> getResponse(Future<ResponseHolder<Res>> future) throws ApiHubException {
 		try {
-			ResponseHolder<Res> result =  future.get();
+			ResponseHolder<Res> result =  future.get(); // This can throw ExecutionException or InterruptedException
 			if(result.isSuccess()) {
 				return result;
 			}else {
-				throw new GenericException("", "failed", "");
+				// If result indicates failure, it should contain the ApiHubException
+				if (result.getException() != null) {
+					throw result.getException();
+				}
+                // Fallback if exception is somehow not set in ResponseHolder on failure
+                throw new InternalServerException("gateway-8001-api", "Request processing failed, but no specific exception was provided in ResponseHolder.", "An unknown error occurred while processing your request.");
 			}
-		}catch (ExecutionException e) {
-			Throwable exp = e.getCause();
-			if(exp instanceof ApiHubException) {
-				throw (ApiHubException) exp;
-			}else {
-				throw new GenericException("", e.getMessage(), "");
+		} catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn(ASYNC_PROCESS_WARN, "Future.get() was interrupted",e);
+            throw new InternalServerException("gateway-8005-api", "Request future was interrupted: " + e.getMessage(), "The operation was interrupted.", e);
+        }catch (ExecutionException e) {
+			Throwable cause = e.getCause();
+			if(cause instanceof ApiHubException) {
+				throw (ApiHubException) cause;
+			} else if (cause instanceof Exception) {
+			    log.error(ASYNC_PROCESS_ERROR,"Unwrapped exception from ExecutionException was not an ApiHubException.", cause);
+                throw new InternalServerException("gateway-8001-api", "An unexpected error occurred during asynchronous execution: " + cause.getMessage(), "An internal error occurred.", (Exception)cause);
+			} else {
+			    log.error(ASYNC_PROCESS_ERROR,"ExecutionException cause was not an Exception.", e);
+                throw new InternalServerException("gateway-8001-api", "An unexpected and critical error occurred during asynchronous execution: " + e.getMessage(), "An internal error occurred.", e);
 			}
-		}
-		catch (Exception e) {
-			throw new GenericException("", e.getMessage(), "");
 		}
 	}
 	
