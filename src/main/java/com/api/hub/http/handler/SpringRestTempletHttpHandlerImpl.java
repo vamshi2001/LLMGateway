@@ -30,6 +30,7 @@ import org.springframework.web.client.RestTemplate;
 import com.api.hub.exception.APICallException;
 import com.api.hub.exception.ApiHubException;
 import com.api.hub.exception.AuthenticationException;
+import com.api.hub.exception.InputException;
 import com.api.hub.exception.InternalServerException;
 import com.api.hub.exception.NetworkOrTimeoutException;
 import com.api.hub.gateway.constants.MarkerConstants;
@@ -199,12 +200,12 @@ public class SpringRestTempletHttpHandlerImpl implements HttpHandler, MarkerCons
 					Thread.sleep(next);
 				} catch (InterruptedException ie) {
 					Thread.currentThread().interrupt();
-					throw new InternalServerException("gateway-8005-api", "Thread interrupted during backoff delay while calling " + url, "The operation was interrupted.", ie);
+					throw new InternalServerException("gateway-8005-api", "Thread interrupted during backoff delay while calling " + url, "The operation was interrupted");
 				}
 				next = execution.nextBackOff();
 			}
 			// If loop finishes, all retries failed
-			throw new NetworkOrTimeoutException("gateway-7002-api", "Unable to call service "  + hosts.getAllURLS() + " after multiple retries.", "The external service is currently unavailable after multiple attempts.", null);
+			throw new NetworkOrTimeoutException("gateway-7002-api", "Unable to call service "  + hosts.getAllURLS() + " after multiple retries.", "The external service is currently unavailable after multiple attempts.");
 			
 		}else { // No backoff enabled
 			try {
@@ -212,7 +213,7 @@ public class SpringRestTempletHttpHandlerImpl implements HttpHandler, MarkerCons
 				ResponseEntity<Res> response = handler.post(url+endpoint, request.getRequestBody(), request.getSpringHeaders(), restTemplate, request.getResponseClass());
 				return new ResponseHolder<Res>(true, null, response);
 			} catch (ApiHubException e) {
-				throw e;
+				return new ResponseHolder<Res>(true, e, null);
 			}
 		}
 	}
@@ -239,26 +240,26 @@ public class SpringRestTempletHttpHandlerImpl implements HttpHandler, MarkerCons
 				return result;
 			}else {
 				// If result indicates failure, it should contain the ApiHubException
-				if (result.getException() != null) {
-					throw result.getException();
+				if (result.getExp() != null) {
+					throw result.getExp();
 				}
                 // Fallback if exception is somehow not set in ResponseHolder on failure
                 throw new InternalServerException("gateway-8001-api", "Request processing failed, but no specific exception was provided in ResponseHolder.", "An unknown error occurred while processing your request.");
 			}
 		} catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.warn(ASYNC_PROCESS_WARN, "Future.get() was interrupted",e);
-            throw new InternalServerException("gateway-8005-api", "Request future was interrupted: " + e.getMessage(), "The operation was interrupted.", e);
+            log.warn(EXTERNAL_API, "Future.get() was interrupted",e);
+            throw new InternalServerException("gateway-8005-api", "Request future was interrupted: " + e.getMessage(), "The operation was interrupted");
         }catch (ExecutionException e) {
 			Throwable cause = e.getCause();
 			if(cause instanceof ApiHubException) {
 				throw (ApiHubException) cause;
 			} else if (cause instanceof Exception) {
-			    log.error(ASYNC_PROCESS_ERROR,"Unwrapped exception from ExecutionException was not an ApiHubException.", cause);
-                throw new InternalServerException("gateway-8001-api", "An unexpected error occurred during asynchronous execution: " + cause.getMessage(), "An internal error occurred.", (Exception)cause);
+			    log.error(EXTERNAL_API,"Unwrapped exception from ExecutionException was not an ApiHubException.");
+                throw new InternalServerException("gateway-8001-api", "An unexpected error occurred during asynchronous execution: " + cause.getMessage(), "An internal error occurred.");
 			} else {
-			    log.error(ASYNC_PROCESS_ERROR,"ExecutionException cause was not an Exception.", e);
-                throw new InternalServerException("gateway-8001-api", "An unexpected and critical error occurred during asynchronous execution: " + e.getMessage(), "An internal error occurred.", e);
+			    log.error(EXTERNAL_API,"ExecutionException cause was not an Exception.", e);
+                throw new InternalServerException("gateway-8001-api", "An unexpected and critical error occurred during asynchronous execution: " + e.getMessage(), "An internal error occurred.");
 			}
 		}
 	}
