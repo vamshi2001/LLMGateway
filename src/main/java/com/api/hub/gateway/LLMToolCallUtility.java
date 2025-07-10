@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.api.hub.exception.InputException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -117,8 +118,8 @@ public class LLMToolCallUtility {
 	
 	public static JsonObjectSchema buildSchemaFromJson(JsonNode array) throws Exception {
         
-        if (!array.isArray()) {
-            throw new IllegalArgumentException("Expected a JSON array");
+        if (array == null || !array.isArray()) {
+            throw new InputException("gateway-1001-llm", "Input 'array' must be a non-null JSON array", "Invalid format for tool arguments: Expected a JSON array.");
         }
 
         Map<String, JsonSchemaElement> properties = new LinkedHashMap<>();

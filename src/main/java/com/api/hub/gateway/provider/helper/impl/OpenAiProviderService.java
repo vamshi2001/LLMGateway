@@ -8,6 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import com.api.hub.exception.APICallException;
+import com.api.hub.exception.ApiHubException;
+import com.api.hub.exception.ModelExecutionException;
 import com.api.hub.gateway.cache.Cache;
 import com.api.hub.gateway.constants.ProviderType;
 import com.api.hub.gateway.model.ChatHistory;
@@ -18,7 +21,6 @@ import com.api.hub.gateway.model.TollCallData;
 import com.api.hub.gateway.provider.helper.Provider;
 
 import dev.langchain4j.agent.tool.ToolSpecification;
-import dev.langchain4j.agent.tool.ToolSpecifications;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.SystemMessage;
@@ -67,10 +69,10 @@ public class OpenAiProviderService implements Provider {
 	Cache<String,TollCallData> toolCallCache;
 
     @Override
-    public ChatResponse getChatResponse(GatewayRequest gatewayRequest) { // Changed return type and param name
+    public ChatResponse getChatResponse(GatewayRequest gatewayRequest) throws ApiHubException { // Changed return type and param name
         if (chatModel == null) {
-            log.error("OpenAI ChatModel is not initialized.");
-            throw new IllegalStateException("OpenAI ChatModel is not initialized.");
+            log.error("OpenAI ChatModel is not initialized. Request ID: {}", gatewayRequest.getRequestId());
+            throw new ModelExecutionException("gateway-5001-ai", "OpenAI ChatModel is not initialized for request ID: " + gatewayRequest.getRequestId(), "AI model required for this request is not available or not configured correctly.");
         }
 
         List<ChatMessage> messages = new ArrayList<>();
@@ -156,7 +158,7 @@ public class OpenAiProviderService implements Provider {
         } catch (Exception e) {
             log.error("Error getting chat response from OpenAI (Request ID: {}): {}", gatewayRequest.getRequestId(), e.getMessage(), e);
             // Consider re-throwing a more specific custom exception or returning an error ChatResponse
-            throw new RuntimeException("Failed to get chat response from OpenAI", e);
+            throw new APICallException("gateway-3002-api", "Failed to get chat response from OpenAI for request ID: " + gatewayRequest.getRequestId() + ". Error: " + e.getMessage(), "Error communicating with the AI service provider");
         }
     }
 }
