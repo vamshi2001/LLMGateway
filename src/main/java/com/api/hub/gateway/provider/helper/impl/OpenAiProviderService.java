@@ -72,7 +72,7 @@ public class OpenAiProviderService implements Provider {
     public ChatResponse getChatResponse(GatewayRequest gatewayRequest) throws ApiHubException { // Changed return type and param name
         if (chatModel == null) {
             log.error("OpenAI ChatModel is not initialized. Request ID: {}", gatewayRequest.getRequestId());
-            throw new ModelExecutionException("gateway-5001-ai", "OpenAI ChatModel is not initialized for request ID: " + gatewayRequest.getRequestId(), "AI model required for this request is not available or not configured correctly.");
+            throw new ModelExecutionException("5001-ai-gateway", "OpenAI ChatModel is not initialized for request ID: " + gatewayRequest.getRequestId(), "AI model required for this request is not available or not configured correctly.");
         }
 
         List<ChatMessage> messages = new ArrayList<>();

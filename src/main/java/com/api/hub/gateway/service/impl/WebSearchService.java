@@ -9,6 +9,9 @@ import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.api.hub.exception.ApiHubException;
+import com.api.hub.exception.GenericException;
+import com.api.hub.exception.InputException;
 import com.api.hub.gateway.model.ChatHistory;
 import com.api.hub.gateway.service.SearchService;
 
@@ -87,58 +90,65 @@ public class WebSearchService implements SearchService{
 	}
 	
 	@Override
-	public String getData(String userMessage, List<ChatHistory> chatHistory) {
-		ChatHistory history = null;
-		if(chatHistory != null && chatHistory.size() > 0) {
-			history = chatHistory.get(chatHistory.size()-1);
+	public String getData(String userMessage, List<ChatHistory> chatHistory) throws ApiHubException {
+		if(userMessage == null || userMessage.isBlank()) {
+			throw new InputException("1002-websearch-gateway", "UserMessage is empty", "User query is required to perform websearch");
 		}
-		
-		String botMsg = "";
-		if(history!=null && history.getAiMessage()!= null) {
-			if(history.getAiMessage().length() > maxCharInAiMsg) {
-				botMsg = history.getAiMessage().substring(0,maxCharInAiMsg);
-			}else {
-				botMsg = history.getAiMessage();
+		try {
+			ChatHistory history = null;
+			if(chatHistory != null && chatHistory.size() > 0) {
+				history = chatHistory.get(chatHistory.size()-1);
 			}
-		}
-		
-		String msg = userMessage + botMsg;
-		
-		WebSearchRequest request = WebSearchRequest.builder()
-        .searchTerms(msg)
-        .maxResults(maxResults)
-        .language(language)
-        .geoLocation(geoLocation)
-        .startPage(startPage)
-        .startIndex(startIndex)
-        .safeSearch(safeSearch)
-        .build();
-		
-		WebSearchResults webresult = searchEngine.search(request);
-		String str = "";
-		for(WebSearchOrganicResult result : webresult.results()) {
 			
-			Document doc = null;
-			try {
+			String botMsg = "";
+			if(history!=null && history.getAiMessage()!= null) {
+				if(history.getAiMessage().length() > maxCharInAiMsg) {
+					botMsg = history.getAiMessage().substring(0,maxCharInAiMsg);
+				}else {
+					botMsg = history.getAiMessage();
+				}
+			}
+			
+			String msg = userMessage + botMsg;
+			
+			WebSearchRequest request = WebSearchRequest.builder()
+	        .searchTerms(msg)
+	        .maxResults(maxResults)
+	        .language(language)
+	        .geoLocation(geoLocation)
+	        .startPage(startPage)
+	        .startIndex(startIndex)
+	        .safeSearch(safeSearch)
+	        .build();
+			
+			WebSearchResults webresult =  null;
+			
+			
+			webresult = searchEngine.search(request);
+			
+			String str = "";
+			for(WebSearchOrganicResult result : webresult.results()) {
+				
+				Document doc = null;
+				
 				doc = Jsoup.connect(result.url().toString()).get();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				
+	             
+	             if(doc != null) {
+	            	 str += doc.body().text();
+	            	 if(str.length() > maxCharactersResults) {
+	     				str = str.substring(0, maxCharactersResults);
+	     				break;
+	     			}
+	             }
 			}
-             
-             if(doc != null) {
-            	 str += doc.body().text();
-            	 if(str.length() > maxCharactersResults) {
-     				str = str.substring(0, maxCharactersResults);
-     				break;
-     			}
-             }
-			
-			
-			
+			return str;
+		}catch (Exception e) {
+			throw new GenericException("9001-websearch-gateway", e.getMessage(), "unable to retrieve information from websearch");
 		}
 		
-		return str;
+		
+		
 	}
 
 }

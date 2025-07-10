@@ -8,6 +8,8 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.api.hub.exception.ApiHubException;
+import com.api.hub.exception.InternalServerException;
 import com.api.hub.gateway.constants.ChatType;
 import com.api.hub.gateway.model.GatewayRequest;
 import com.api.hub.gateway.model.Model;
@@ -25,7 +27,7 @@ public class DefaultModelSelecter implements ModelSelecter{
 	private LLMModelsHolder holder;
 	
 	@Override
-	public AiMessage getResponse(GatewayRequest request) {
+	public AiMessage getResponse(GatewayRequest request) throws ApiHubException {
 		
 		
 		Integer maxFallBack = request.getMaxFallBackModels();
@@ -53,7 +55,7 @@ public class DefaultModelSelecter implements ModelSelecter{
 			}
 		}while(maxFallBack-- > 0);
 		
-		return null;
+		throw new InternalServerException("8001-ai-gateway", "failed to find model for given request", "unable to find a model for given request");
 	}
 	
 	public AvalibleModel getModel(GatewayRequest request) {

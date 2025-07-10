@@ -3,6 +3,8 @@ package com.api.hub.gateway;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.api.hub.exception.ApiHubException;
+import com.api.hub.exception.InputException;
 import com.api.hub.gateway.constants.ChatType;
 import com.api.hub.gateway.constants.RagFlowType;
 import com.api.hub.gateway.model.GatewayRequest;
@@ -30,8 +32,11 @@ public class Utility {
 		return ChatType.CHAT;
 	}
 	
-	public static List<RagFlowType> ragFlowType(String ragSource){
+	public static List<RagFlowType> ragFlowType(String ragSource) throws ApiHubException{
 		
+		if(ragSource == null || ragSource.isBlank()) {
+			throw new InputException("1006-rag-gateway", "rag source is empty", "rag source is required");
+		}
 		String[] ragSources = (ragSource!= null) ? ragSource.split(",") : new String[0];
 		
 		List<RagFlowType> ragFlows = new ArrayList<RagFlowType>();
@@ -43,6 +48,10 @@ public class Utility {
 			} else if(source.equals(RagFlowType.WEB_SEARCH.getLabel())) {
 				ragFlows.add(RagFlowType.WEB_SEARCH);
 			}
+		}
+		
+		if(ragFlows.size() < 1) {
+			throw new InputException("1005-rag-gateway", "rag source is invalid not matching with configured sources " + ragSource, "rag source is invalid please enter correct source");
 		}
 		return ragFlows;
 	}
