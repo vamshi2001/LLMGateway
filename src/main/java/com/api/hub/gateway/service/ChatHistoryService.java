@@ -8,7 +8,7 @@ import com.api.hub.gateway.model.ChatHistory;
 
 public interface ChatHistoryService {
 
-	List<ChatHistory> getChatHistory(ChatType chatType ,String bSessionId, int nChats) throws ApiHubException;
+	List<ChatHistory> getChatHistory(ChatType chatType ,String bSessionId) throws ApiHubException;
 	
 	void save(ChatType chatType, ChatHistory history) throws ApiHubException;
 }

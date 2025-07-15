@@ -12,12 +12,12 @@ import com.api.hub.exception.ApiHubException;
 import com.api.hub.exception.InternalServerException;
 import com.api.hub.gateway.constants.ChatType;
 import com.api.hub.gateway.model.GatewayRequest;
+import com.api.hub.gateway.model.GatewayResponse;
 import com.api.hub.gateway.model.Model;
 import com.api.hub.gateway.provider.helper.Provider;
 import com.api.hub.gateway.service.ModelSelecter;
 import com.api.hub.gateway.service.impl.LLMModelsHolder.AvalibleModel;
 
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.response.ChatResponse;
 
 @Component
@@ -27,10 +27,10 @@ public class DefaultModelSelecter implements ModelSelecter{
 	private LLMModelsHolder holder;
 	
 	@Override
-	public AiMessage getResponse(GatewayRequest request) throws ApiHubException {
+	public GatewayResponse getResponse(GatewayRequest request) throws ApiHubException {
 		
 		
-		Integer maxFallBack = request.getMaxFallBackModels();
+		Integer maxFallBack = request.getPersonaProps().getMaxFallBackModels();
 		List<String> modelsToSkip = request.getSkipModels();
 		do {
 			AvalibleModel avalible = getModel(request);
@@ -38,16 +38,16 @@ public class DefaultModelSelecter implements ModelSelecter{
 				continue;
 			}
 			Model model = avalible.getModel();
-			ChatResponse res = null;
+			GatewayResponse res = null;
 			try {
 				
 				Provider provider = holder.getProvider(model.getProvider());
 				request.setModelName(model.getModelId());
 				res = provider.getChatResponse(request);
 				
-				holder.compute(model.getModelId(), res.metadata(), avalible);
+				holder.compute(model.getModelId(), res.getChatResponse().metadata(), avalible);
 				
-				return res.aiMessage();
+				return res;
 			}catch (Exception e) {
 				modelsToSkip.add(model.getModelId());
 				holder.failed(avalible);
@@ -72,7 +72,6 @@ public class DefaultModelSelecter implements ModelSelecter{
 			modelsList = holder.getModels(ChatType.CHAT);
 		}else if(request.getUserImage() != null) {
 			
-			
 		}
 		
 		if(modelsList == null || modelsList.size() < 1) {
@@ -94,13 +93,13 @@ public class DefaultModelSelecter implements ModelSelecter{
 		}
 		
 		Set<String> topicSupportedModels = new HashSet<String>();
-		if(request.getTopics() != null) {
-			for(String topic : request.getTopics()) {
-				Set<String> modelsListTmp = holder.getTopicSupportedModels(topic);
-				if(modelsListTmp != null && modelsListTmp.size() > 0) {
-					topicSupportedModels.addAll(modelsListTmp);
-				}
+		if(request.getPersona() != null && !request.getPersona().isBlank()) {
+			
+			Set<String> modelsListTmp = holder.getTopicSupportedModels(request.getPersona());
+			if(modelsListTmp != null && modelsListTmp.size() > 0) {
+				topicSupportedModels.addAll(modelsListTmp);
 			}
+			
 		}
 		
 		if(topicSupportedModels.size() > 1) {

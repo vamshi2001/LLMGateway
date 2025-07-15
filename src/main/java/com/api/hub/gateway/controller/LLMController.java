@@ -69,35 +69,9 @@ public class LLMController {
             throw new InputException("1002-input-gateway", "userMessage is required", "Missing user message");
         }
 
-        if (request.getSystemMessage() == null || request.getSystemMessage().trim().isEmpty()) {
-            throw new InputException("1002-input-gateway", "systemMessage is required", "Missing system message");
-        }
-
         // Required file
         if ( (request.getUserImage() == null || request.getUserImage().isEmpty()) && userMsgEmpty ) {
             throw new InputException("1006-input-gateway", "userImage is required", "Missing msg or image is required");
-        }
-
-        // Numeric validations
-        if (request.getRagMaxResults() == null || request.getRagMaxResults() < 1) {
-            throw new InputException("1004-input-gateway", "ragMaxResults must be >= 1", "Invalid ragMaxResults");
-        }
-
-        if (request.getMaxChatHistory() == null || request.getMaxChatHistory() < 0) {
-            throw new InputException("1004-input-gateway", "maxChatHistory must be >= 0", "Invalid maxChatHistory");
-        }
-
-        if (request.getMaxFallBackModels() == null || request.getMaxFallBackModels() < 0) {
-            throw new InputException("1004-input-gateway", "maxFallBackModels must be >= 0", "Invalid maxFallBackModels");
-        }
-
-        // Optional list validation
-        if (request.getTopics() != null) {
-            for (String topic : request.getTopics()) {
-                if (topic == null || topic.trim().isEmpty()) {
-                    throw new InputException("1001-input-gateway", "Topics must not contain blank values", "Invalid topic in topics list");
-                }
-            }
         }
     }
 	

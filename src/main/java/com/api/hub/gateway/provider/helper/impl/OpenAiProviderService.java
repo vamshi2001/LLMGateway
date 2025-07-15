@@ -2,29 +2,24 @@ package com.api.hub.gateway.provider.helper.impl;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import com.api.hub.exception.APICallException;
 import com.api.hub.exception.ApiHubException;
 import com.api.hub.exception.ModelExecutionException;
-import com.api.hub.gateway.cache.Cache;
+import com.api.hub.gateway.constants.ChatType;
 import com.api.hub.gateway.constants.ProviderType;
-import com.api.hub.gateway.model.ChatHistory;
 import com.api.hub.gateway.model.GatewayRequest;
+import com.api.hub.gateway.model.GatewayResponse;
 import com.api.hub.gateway.model.OpenAIAllModelProperties;
 import com.api.hub.gateway.model.OpenAIChatModelProperties;
-import com.api.hub.gateway.model.TollCallData;
 import com.api.hub.gateway.provider.helper.Provider;
+import com.api.hub.gateway.service.impl.LLMRequestHelper;
+import com.api.hub.gateway.service.impl.LLMRequestHelper.Request;
 
-import dev.langchain4j.agent.tool.ToolSpecification;
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.SystemMessage;
-import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.request.ToolChoice;
 // import dev.langchain4j.model.chat.request.Prompt; // Removed, ChatRequest uses List<ChatMessage>
@@ -59,56 +54,35 @@ public class OpenAiProviderService implements Provider {
 	@Autowired(required = false)
 	private OpenAIAllModelProperties modelProperties;
 	
+	@Autowired
+	private LLMRequestHelper handler;
+	
     @Override
     public String getName() {
         return ProviderType.OPENAI.getLabel();
     }
-    
-    @Autowired
-	@Qualifier("ToolCallCache")
-	Cache<String,TollCallData> toolCallCache;
 
     @Override
-    public ChatResponse getChatResponse(GatewayRequest gatewayRequest) throws ApiHubException { // Changed return type and param name
+    public GatewayResponse getChatResponse(GatewayRequest gatewayRequest) throws ApiHubException { // Changed return type and param name
         if (chatModel == null) {
             log.error("OpenAI ChatModel is not initialized. Request ID: {}", gatewayRequest.getRequestId());
             throw new ModelExecutionException("5001-ai-gateway", "OpenAI ChatModel is not initialized for request ID: " + gatewayRequest.getRequestId(), "AI model required for this request is not available or not configured correctly.");
         }
 
-        List<ChatMessage> messages = new ArrayList<>();
+        
         // SystemMessage could be added here if there's a global system message for this provider
         // messages.add(SystemMessage.from("Default system message for OpenAI"));
 
-        if (gatewayRequest.getChatHistory() != null) {
-            try {
-                List<ChatHistory> historyList = gatewayRequest.getChatHistory().get();
-                if (historyList != null && !historyList.isEmpty()) {
-                	for(ChatHistory history : historyList) {
-                		 messages.add(UserMessage.from(history.getUserMessage()));
-                		 messages.add(AiMessage.from(history.getAiMessage()));
-                	}
-                }
-            } catch (InterruptedException | ExecutionException e) {
-                log.error("Error retrieving chat history for OpenAI request {}: {}", gatewayRequest.getRequestId(), e.getMessage());
-                Thread.currentThread().interrupt();
-            }
-        }
-        //ObjectProvider<ChatModelListener> listeners;
-        messages.add(UserMessage.from(gatewayRequest.getUserMessage()));
         
-        messages.add(SystemMessage.from(gatewayRequest.getSystemMessage()));
-        if(gatewayRequest.getAdditionalInfo() != null && gatewayRequest.getAdditionalInfo().size() > 0) {
-        	for(String str : gatewayRequest.getAdditionalInfo()) {
-        		 messages.add(SystemMessage.from(str));
-        	}
-        }
-        List<ToolSpecification> specs = new ArrayList<ToolSpecification>();
-        for(String key : toolCallCache.keys()) {
-        	specs.add(toolCallCache.get(key).getToolSpecification());
-        }
+        //ObjectProvider<ChatModelListener> listeners;
+       
+        
+        
+       
+        Request request = handler.getRequest(gatewayRequest, ChatType.CHAT);
         
         OpenAIChatModelProperties chatModelProperties = modelProperties.openAIChatModelProperties(gatewayRequest.getModelName());
-        OpenAiChatRequestParameters  parameters = OpenAiChatRequestParameters.builder()
+        OpenAiChatRequestParameters.Builder  parametersBuilder = OpenAiChatRequestParameters.builder()
         .modelName(chatModelProperties.modelName())
         .temperature(chatModelProperties.temperature())
         .topP(chatModelProperties.topP())
@@ -127,20 +101,25 @@ public class OpenAiProviderService implements Provider {
         .parallelToolCalls(chatModelProperties.parallelToolCalls())
         .store(chatModelProperties.store())
         .metadata(chatModelProperties.metadata())
-        .serviceTier(chatModelProperties.serviceTier())
-        .toolChoice(ToolChoice.AUTO)
-        .toolSpecifications(specs)
+        .serviceTier(chatModelProperties.serviceTier());
+        //.toolChoice(ToolChoice.AUTO)
+       // .toolSpecifications(specs)
        // .defaultRequestParameters(OpenAiChatRequestParameters.builder()
        //         .reasoningEffort(chatModelProperties.reasoningEffort())
        //         .build())
         
         //.listeners(listeners.orderedStream().toList())
-        .build();
+       // .build();
         
-        	
+        if(request.getChoice() != null && request.getTools() != null) {
+        	parametersBuilder.toolChoice(request.getChoice());
+        	parametersBuilder.toolSpecifications(request.getTools());
+        }
+        
+        OpenAiChatRequestParameters parameters = parametersBuilder.build();
         // Construct ChatRequest with messages
         ChatRequest chatRequest = ChatRequest.builder()
-        		.messages(messages)
+        		.messages(request.getMessages())
         		.parameters(parameters)
 				/*
 				 * .toolChoice(ToolChoice.REQUIRED) .toolSpecifications(specs)
@@ -154,7 +133,7 @@ public class OpenAiProviderService implements Provider {
             ChatResponse response = chatModel.doChat(chatRequest);
 
             log.info("Received response from OpenAI for Request ID: {}", gatewayRequest.getRequestId());
-            return response;
+            return new GatewayResponse(response,null);
         } catch (Exception e) {
             log.error("Error getting chat response from OpenAI (Request ID: {}): {}", gatewayRequest.getRequestId(), e.getMessage(), e);
             // Consider re-throwing a more specific custom exception or returning an error ChatResponse

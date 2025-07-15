@@ -16,7 +16,7 @@ import com.api.hub.gateway.LLMToolCallUtility;
 import com.api.hub.gateway.cache.AbstractCacheOperations;
 import com.api.hub.gateway.dao.ToolCallDao;
 import com.api.hub.gateway.model.TollCallData;
-import com.api.hub.gateway.provider.helper.impl.ModelPropertiesHandler;
+import com.api.hub.gateway.service.impl.LLMRequestHelper;
 import com.mongodb.client.FindIterable;
 
 import dev.langchain4j.agent.tool.ToolSpecification;
@@ -29,10 +29,14 @@ public class ToolCallCache  extends AbstractCacheOperations<String,TollCallData>
 	
 	@Autowired
 	ToolCallDao dao;
+	
+	@Autowired
+	LLMRequestHelper helper;
 
 	@Override
 	public boolean source() {
 		
+		boolean changed = false;
 		FindIterable<Document>  files = dao.get();
 	    for (Document doc : files) {
 	    	
@@ -45,9 +49,9 @@ public class ToolCallCache  extends AbstractCacheOperations<String,TollCallData>
 	        String previousData = fileSizeMap.get(toolName);
 
 	        if (!fileSizeMap.containsKey(toolName) || previousData == null || previousData.equals(base64EncodedProps)) {
-	        	
+	        	changed = true;
 	        	TollCallData toolData = new TollCallData();
-	        	toolData.setEnabled(enabled);toolData.setSupportedTopics(supportedTopics);toolData.setToolArguments(base64EncodedProps);
+	        	toolData.setEnabled(enabled);toolData.setSupportedPersona(supportedTopics);toolData.setToolArguments(base64EncodedProps);
 	        	toolData.setToolDescription(toolDescription);
 	        	toolData.setToolName(toolName);
 	        	toolData.setEndPoint(endPoint);
@@ -67,6 +71,9 @@ public class ToolCallCache  extends AbstractCacheOperations<String,TollCallData>
 		             e.printStackTrace();
 	            }
 	        }
+	    }
+	    if(changed) {
+	    	helper.compute();
 	    }
 		return false;
 	}

@@ -1,7 +1,5 @@
 package com.api.hub.gateway.service.impl;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -15,6 +13,7 @@ import org.springframework.stereotype.Component;
 import com.api.hub.auth.AutheticationHandler;
 import com.api.hub.exception.ApiHubException;
 import com.api.hub.gateway.BackOffFactory;
+import com.api.hub.gateway.cache.Cache;
 import com.api.hub.gateway.model.GatewayRequest;
 import com.api.hub.gateway.model.TollCallData;
 import com.api.hub.gateway.service.ToolCallService;
@@ -42,6 +41,10 @@ public class ToolCallServiceImpl implements ToolCallService{
     @Qualifier("NOPAuthenticationHandler")
     private AutheticationHandler autheticationHandler;
     
+    @Autowired
+	@Qualifier("ToolCallCache")
+	Cache<String,TollCallData> toolCallCache;
+    
     @PostConstruct
     public void init() {
     	handler.init("toolcall"  );
@@ -56,8 +59,9 @@ public class ToolCallServiceImpl implements ToolCallService{
         return headers;
     }
     
-	public String getResponse(GatewayRequest request, String body, TollCallData data, String userId) throws ApiHubException{
+	public String getResponse(GatewayRequest request, String body, String toolName, String userId) throws ApiHubException{
 		
+		TollCallData data = toolCallCache.get(toolName);
 		ResponseEntity<String> res = handler.getResponse(
        		 handler.sendRequest(handler.createRequest(String.class, String.class)
        			    	.setPathParams(data.getEndPoint())

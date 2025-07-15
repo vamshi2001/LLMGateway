@@ -13,6 +13,6 @@ public class TollCallData {
 	private String toolName;
 	private String toolArguments;
 	private boolean enabled;
-	private List<String> supportedTopics;
+	private List<String> supportedPersona;
 	private ToolSpecification toolSpecification;
 }
