@@ -21,8 +21,6 @@ public abstract class AbstractCacheOperations<K,V> extends InMemoryCache<K,V> {
 	
 	protected Queue<K> keysToUpdate = new LinkedBlockingQueue<K>();
 	
-	protected long lastRefreshTime = 0;
-	
 	@PostConstruct
 	public void intit() {
 		refresher.registerCache(this);
@@ -32,16 +30,15 @@ public abstract class AbstractCacheOperations<K,V> extends InMemoryCache<K,V> {
 	@Override
 	public synchronized boolean refresh() {
 		
-		if ((System.currentTimeMillis() - lastRefreshTime) > minRefreshTime()) {
-			while(!keysToUpdate.isEmpty()) {
-			
-				K key = keysToUpdate.poll();
-				sink(key);
-			}
-			clear();
-			source();
-			lastRefreshTime = System.currentTimeMillis();
+		
+		while(!keysToUpdate.isEmpty()) {
+		
+			K key = keysToUpdate.poll();
+			sink(key);
 		}
+		clear();
+		source();
+			
 		return true;
 	}
 
@@ -55,11 +52,6 @@ public abstract class AbstractCacheOperations<K,V> extends InMemoryCache<K,V> {
 		}
 	}
 	
-	@Override
-	public long getLastRefreshTime() {
-		
-		return lastRefreshTime;
-	}
 	
 	@Override
 	public boolean close() {

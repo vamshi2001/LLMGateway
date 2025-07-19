@@ -1,6 +1,7 @@
 package com.api.hub.gateway.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,7 +11,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.api.hub.exception.ApiHubException;
 import com.api.hub.exception.InputException;
+import com.api.hub.gateway.cache.Cache;
+import com.api.hub.gateway.dao.SystemInfoVectorDao;
 import com.api.hub.gateway.model.GatewayRequest;
+import com.api.hub.gateway.model.PersonaProperties;
 import com.api.hub.gateway.model.Pojo;
 import com.api.hub.gateway.service.LLMGatewayService;
 
@@ -21,6 +25,13 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api")
 @Slf4j
 public class LLMController {
+	
+	@Autowired
+	@Qualifier("PersonaPropsCache")
+	private Cache<String, PersonaProperties> personaProps;
+	
+	@Autowired
+	SystemInfoVectorDao dao;
 
 	// .setHttpClientBuilderFactory(new SpringRestClientBuilderFactory());
 
@@ -29,9 +40,8 @@ public class LLMController {
 
 	@PostMapping(value = "v1/llm", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> getResponse(@RequestBody GatewayRequest req, HttpServletRequest request) {
-
-		
 		// req.setUserMessage("what is the result of 5 + 25");
+		
 		try {
 			validate(req);
 		} catch (ApiHubException e) {
@@ -40,12 +50,26 @@ public class LLMController {
 		}
 		String res = null;
 		try {
+			req.setPersonaProps(personaProps.get(req.getPersona()));
 			res = service.getResponse(req);
 		} catch (ApiHubException e) {
 			log.error(e.toString());
 			return ResponseEntity.internalServerError().body(e.getMsgToUser());
 		}
 		return ResponseEntity.ok(res);
+	}
+	
+	@PostMapping(value = "v1/save", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<String> save(@RequestBody GatewayRequest req, HttpServletRequest request) {
+		// req.setUserMessage("what is the result of 5 + 25");
+		
+		try {
+			dao.save(req);
+		} catch (ApiHubException e) {
+			// TODO Auto-generated catch block
+			return ResponseEntity.badRequest().body(e.getMsgToUser());
+		}
+		return ResponseEntity.ok("suucess");
 	}
 
 	@PostMapping(value = "getSumResult", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)

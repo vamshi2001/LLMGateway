@@ -35,10 +35,10 @@ public class LLMGatewayServiceImpl implements LLMGatewayService{
 	private DefaultModelSelecter processor;
 	
 	@Autowired
-	ToolCallService toolService;
+	private ToolCallService toolService;
 	
 	@Autowired
-	QueryRewriteService service;
+	private QueryRewriteService service;
 	
 	@Override
 	public String getResponse(GatewayRequest req) throws ApiHubException {
@@ -84,16 +84,19 @@ public class LLMGatewayServiceImpl implements LLMGatewayService{
 				}
 			}
 			GatewayResponse res = processor.getResponse(req);
-			msg = res.getChatResponse().aiMessage();
-			if(msg != null && msg.text() != null && msg.text().length() > 0) {
-				ChatHistory his = new ChatHistory(req.getUserMessage(), msg.text(), null, req.getBotSessionid());
-				try {
-					chatHistory.save(Utility.getChatType(req), his);
-				}catch (ApiHubException e) {
-					//loggers
+			
+			if(res.getChatResponse() != null) {
+				if(msg != null && msg.text() != null && msg.text().length() > 0) {
+					ChatHistory his = new ChatHistory(req.getUserMessage(), msg.text(), null, req.getBotSessionid());
+					try {
+						chatHistory.save(Utility.getChatType(req), his);
+					}catch (ApiHubException e) {
+						//loggers
+					}
 				}
-				
 			}
+			msg = res.getChatResponse().aiMessage();
+			
 		}while(msg != null && msg.hasToolExecutionRequests());
 		
 		

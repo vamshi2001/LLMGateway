@@ -37,37 +37,28 @@ public class ToolCallCache  extends AbstractCacheOperations<String,TollCallData>
 	public boolean source() {
 		
 		boolean changed = false;
-		FindIterable<Document>  files = dao.get();
-	    for (Document doc : files) {
+		List<TollCallData>  files = dao.get();
+	    for (TollCallData doc : files) {
 	    	
-	        String toolName = doc.getString("toolName");
-	        String toolDescription = doc.getString("toolDescription");
-	        List<String> supportedTopics = doc.getList("supportedTopics", String.class, new ArrayList<String>());
-	        boolean enabled = doc.getBoolean("enabled", false);
-	        String base64EncodedProps = doc.getString("toolArguments");
-	        String endPoint = doc.getString("endPoint");
-	        String previousData = fileSizeMap.get(toolName);
+	        
+	        String previousData = fileSizeMap.get(doc.getToolName());
 
-	        if (!fileSizeMap.containsKey(toolName) || previousData == null || previousData.equals(base64EncodedProps)) {
+	        if (!fileSizeMap.containsKey(doc.getToolName()) || previousData == null || previousData.equals(doc.getToolArguments())) {
 	        	changed = true;
-	        	TollCallData toolData = new TollCallData();
-	        	toolData.setEnabled(enabled);toolData.setSupportedPersona(supportedTopics);toolData.setToolArguments(base64EncodedProps);
-	        	toolData.setToolDescription(toolDescription);
-	        	toolData.setToolName(toolName);
-	        	toolData.setEndPoint(endPoint);
+	        	
 	        	Base64.Decoder decoder = Base64.getDecoder();
 	    		
-	            byte[] bytes = decoder.decode(base64EncodedProps);
+	            byte[] bytes = decoder.decode(doc.getToolArguments());
 	            String schemaText = new String(bytes);
 	            try {
-	            	ToolSpecification toolSpecification= LLMToolCallUtility.toolSpecificationFrom(toolName, toolDescription, schemaText);
-	            	toolData.setToolSpecification(toolSpecification);
-	                data.put(toolName, toolData);
-	                fileSizeMap.put(toolName, base64EncodedProps);
+	            	ToolSpecification toolSpecification= LLMToolCallUtility.toolSpecificationFrom(doc.getToolName(), doc.getToolDescription(), schemaText);
+	            	doc.setToolSpecification(toolSpecification);
+	                data.put(doc.getToolName(), doc);
+	                fileSizeMap.put(doc.getToolName(), doc.getToolArguments());
 	                
-	                System.out.println("Loaded or reloaded: " + toolName);
+	                System.out.println("Loaded or reloaded: " + doc.getToolName());
 	            } catch (Exception e) {
-	            	 System.err.println("Unexpected error occured while loading properties from: " + toolName);
+	            	 System.err.println("Unexpected error occured while loading properties from: " + doc.getToolName());
 		             e.printStackTrace();
 	            }
 	        }

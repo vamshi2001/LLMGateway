@@ -1,7 +1,12 @@
 package com.api.hub.gateway.cache.impl;
 
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -65,17 +70,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class CacheRefresher implements MarkerConstants {
 
-    /**
-     * Minimum time in milliseconds between two refresh calls for the same cache instance.
-     * Configurable via property "cache.min.refreshTime.ms", defaults to 5000 ms.
-     */
-    @Value("${cache.min.refreshTime.ms:5000}")
-    private long minRefreshTimeInMs = 5000;
-
+    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
     /**
      * Internal list of registered caches to be refreshed periodically.
      */
     private List<CacheOperations<?,?>> cacheList = new LinkedList<>();
+    private Map<CacheOperations<?,?>, ScheduledFuture<?>> cacheMap = new HashMap<CacheOperations<?,?>, ScheduledFuture<?>>();
 
     /**
      * Registers a cache instance implementing {@link CacheOperations} for periodic refresh.
@@ -83,31 +83,12 @@ public class CacheRefresher implements MarkerConstants {
      * @param cache the cache instance to register, must not be null
      */
     public void registerCache(@NonNull CacheOperations<?,?> cache) {
-        cacheList.add(cache);
+    	
+    	cacheMap.put(cache, scheduler.scheduleWithFixedDelay(() -> cache.refresh(), cache.minRefreshTime(), cache.minRefreshTime(), TimeUnit.MILLISECONDS));
     }
     
     public void removeCache(@NonNull CacheOperations<?,?> cache) {
-        cacheList.remove(cache);
-    }
-
-    /**
-     * Scheduled method triggered periodically based on the configured fixed delay (default 300 seconds).
-     * 
-     * <p>
-     * For each registered cache, this method checks if the minimum refresh interval has passed since
-     * the last refresh. If yes, it calls {@link CacheOperations#clear()} followed by {@link CacheOperations#refresh()}
-     * to update the cache contents.
-     * </p>
-     * 
-     * @return true indicating the refresh cycle completed
-     */
-    @Scheduled(fixedDelayString = "${cache.refreshTime.sec:300}", timeUnit = TimeUnit.SECONDS, initialDelayString = "${cache.refreshTime.sec:300}" )
-    public boolean refresh() {
-        log.info(BACKGROUND_TASK, "Starting refresh, total process - " + cacheList.size());
-        cacheList.parallelStream().forEach((cache) -> {
-                cache.refresh();
-            
-        });
-        return true;
+    	ScheduledFuture<?>  future = cacheMap.remove(cache);
+    	future.cancel(true);
     }
 }

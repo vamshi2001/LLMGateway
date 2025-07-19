@@ -14,6 +14,7 @@ import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import com.api.hub.exception.ApiHubException;
@@ -33,6 +34,7 @@ import dev.langchain4j.web.search.google.customsearch.GoogleCustomWebSearchEngin
 import jakarta.annotation.PostConstruct;
 
 @Component("websearch")
+@ConditionalOnProperty(name = "google.searchengine.enabled", havingValue = "true")
 public class WebSearchService implements SearchService{
 
 	/*

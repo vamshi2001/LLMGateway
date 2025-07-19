@@ -1,6 +1,7 @@
 package com.api.hub.gateway.service.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import com.api.hub.exception.ApiHubException;
 import com.api.hub.exception.GenericException;
@@ -9,6 +10,7 @@ import com.api.hub.gateway.model.GatewayRequest;
 import com.api.hub.gateway.model.GatewayResponse;
 import com.api.hub.gateway.service.QueryRewriteService;
 
+@Service
 public class QueryRewriteServiceImpl implements QueryRewriteService{
 
 	@Autowired

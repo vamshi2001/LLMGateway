@@ -1,6 +1,7 @@
 <configuration scan="true" scanPeriod="30 minutes">
 
 	<property name="USE_CUSTOM_LOGGING" value="false"/>
+	<property name="USE_DEBUG_LOGGING" value="true"/>
 	
 	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder>
@@ -36,7 +37,13 @@
 	        <appender-ref ref="CONSOLE" />
 	    </logger>
 	</if>
-	<root level="debug">
+	
+	<if condition='"USE_DEBUG_LOGGING" == "true"'>
+	    <logger name="com.api" level="DEBUG" additivity="false">
+	        <appender-ref ref="CONSOLE" />
+	    </logger>
+	</if>
+	<root level="info">
 		<appender-ref ref="CONSOLE" /> 
 	</root>
 </configuration>

@@ -23,7 +23,6 @@ import com.api.hub.http.url.HostReslover;
 import jakarta.annotation.PostConstruct;
 
 @Component
-@ConditionalOnProperty(name = "toolcall.service.enable", havingValue = "true")
 public class ToolCallServiceImpl implements ToolCallService{
 
 	@Autowired

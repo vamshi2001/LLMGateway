@@ -13,7 +13,7 @@ import com.api.hub.gateway.service.SearchService;
 
 import dev.langchain4j.data.embedding.Embedding;
 
-@Component("VectorSearchServiceImpl")
+@Component("vectorSearchService")
 public class VectorSearchServiceImpl implements SearchService{
 
 	@Autowired

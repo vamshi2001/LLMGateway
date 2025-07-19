@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Gateway Configuration</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white text-slate-800">
+  <div class="flex flex-col md:flex-row h-screen">
+    <!-- Sidebar -->
+    <aside class="w-full md:w-64 bg-slate-100 border-r border-slate-300 p-4 flex-shrink-0">
+      <h2 class="text-xl font-semibold text-blue-600 mb-6 text-center">LLM Gateway</h2>
+      <nav class="space-y-2">
+        <button class="w-full text-left px-4 py-2 rounded-md hover:bg-blue-100 transition" onclick="loadPage('/web/modelMetaData')">Model Metadata</button>
+		<button class="w-full text-left px-4 py-2 rounded-md hover:bg-blue-100 transition" onclick="loadPage('/web/modelMetrics')">Model Metrics</button>
+        <button class="w-full text-left px-4 py-2 rounded-md hover:bg-blue-100 transition" onclick="loadPage('/web/personaProperties')">Persona Properties</button>
+        <button class="w-full text-left px-4 py-2 rounded-md hover:bg-blue-100 transition" onclick="loadPage('/web/modelProperties')">Model Properties</button>
+        <button class="w-full text-left px-4 py-2 rounded-md hover:bg-blue-100 transition" onclick="loadPage('/web/toolCall')">Tool Call</button>
+        <button class="w-full text-left px-4 py-2 rounded-md hover:bg-blue-100 transition" onclick="loadPage('/web/websearch')">Websearch</button>
+        <button class="w-full text-left px-4 py-2 rounded-md hover:bg-blue-100 transition" onclick="loadPage('/web/promptVersion')">Prompt Version</button>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-grow p-4 bg-slate-50 overflow-auto">
+      <div class="w-full h-full rounded-lg shadow border border-slate-200 overflow-hidden">
+        <iframe id="configFrame" src="/web/modelMetaData" class="w-full h-[80vh] md:h-full"></iframe>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function loadPage(page) {
+      const iframe = document.getElementById('configFrame');
+      iframe.src = page;
+      iframe.focus();
+    }
+  </script>
+</body>
+</html>

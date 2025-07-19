@@ -8,4 +8,6 @@ import com.api.hub.gateway.model.JsoupExtractionConfig;
 public interface WebSearchConfigDao {
 
 	List<JsoupExtractionConfig> get() throws ApiHubException;
+
+	void save(JsoupExtractionConfig config);
 }

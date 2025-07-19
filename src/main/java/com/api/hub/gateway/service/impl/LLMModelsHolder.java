@@ -16,11 +16,12 @@ import org.springframework.stereotype.Component;
 
 import com.api.hub.gateway.cache.Cache;
 import com.api.hub.gateway.constants.ChatType;
+import com.api.hub.gateway.constants.ProviderType;
+import com.api.hub.gateway.model.GatewayResponse;
 import com.api.hub.gateway.model.Model;
 import com.api.hub.gateway.model.ModelMetric;
 import com.api.hub.gateway.provider.helper.Provider;
 
-import dev.langchain4j.model.chat.response.ChatResponseMetadata;
 import dev.langchain4j.model.output.TokenUsage;
 import jakarta.annotation.PostConstruct;
 
@@ -37,10 +38,19 @@ public class LLMModelsHolder {
 	private Cache<String,ModelMetric> modelMetricsCache;
 	
 	@Autowired
-	private Provider provider;
+	@Qualifier("ollamaProvider")
+	private Provider ollama;
+	
+	@Autowired
+	@Qualifier("openAiProvider")
+	private Provider openAI;
 	
 	public Provider getProvider(String providerName) {
-		return provider;
+		
+		if(ProviderType.OLLAMA.getLabel().equals(providerName)) {
+			return ollama;
+		}
+		return openAI;
 	}
 	
 	@PostConstruct
@@ -144,8 +154,17 @@ public class LLMModelsHolder {
 		}
 		
 	}
-	public void compute(String id, ChatResponseMetadata metadata, AvalibleModel avalible) {
-		TokenUsage usage = metadata.tokenUsage();
+	public void compute(String id, GatewayResponse res, AvalibleModel avalible) {
+		TokenUsage usage = null;
+		if(res.getChatResponse() != null) {
+			usage = res.getChatResponse().tokenUsage();
+		}else if(res.getEmbeddingResponse() != null) {
+			usage = res.getEmbeddingResponse().tokenUsage();
+		}else {
+			avalible.unlock();
+			return;
+		}
+		
 		ModelMetric modelMetric = avalible.getMetrics();
 		modelMetric.setCurrentInputTokenConsumedPerDay(usage.inputTokenCount());
 		modelMetric.setCurrentInputTokenConsumedPerMonth(usage.inputTokenCount());

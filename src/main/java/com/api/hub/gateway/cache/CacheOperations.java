@@ -74,7 +74,6 @@ public interface CacheOperations<K,V> {
      * 
      * @return last refresh time as a long value representing epoch millis
      */
-    public long getLastRefreshTime();
 
     /**
      * Notifies or triggers cache handlers or listeners about an update

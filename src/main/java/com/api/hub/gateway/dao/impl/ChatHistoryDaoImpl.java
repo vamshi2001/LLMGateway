@@ -7,6 +7,7 @@ import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import com.api.hub.exception.ApiHubException;
@@ -24,6 +25,7 @@ import jakarta.annotation.PostConstruct;
 import static com.mongodb.client.model.Sorts.descending;
 
 @Repository
+@ConditionalOnProperty(name = "mongoDB.chathistory.enable", havingValue = "true")
 public class ChatHistoryDaoImpl implements ChatHistoryDao{
 	
 	@Autowired

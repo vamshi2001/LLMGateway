@@ -1,26 +1,34 @@
 package com.api.hub.gateway.dao.impl;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import com.api.hub.exception.ApiHubException;
 import com.api.hub.exception.DatabaseException;
+import com.api.hub.gateway.Utility;
 import com.api.hub.gateway.dao.SystemInfoVectorDao;
+import com.api.hub.gateway.model.GatewayRequest;
+import com.api.hub.gateway.model.GatewayResponse;
 import com.api.hub.gateway.model.RagModel;
+import com.api.hub.gateway.provider.helper.impl.OllamaProviderService;
 import com.api.hub.vector.util.WeaviateEmbeddingStore;
 
-import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingSearchResult;
 import jakarta.annotation.PostConstruct;
 
 @Component
+@ConditionalOnProperty(name = "weaviateDB.sysinfo.enable", havingValue = "true")
 public class SystemInfoVectorDaoImpl implements SystemInfoVectorDao{
 
 	@Value("${weaviate.api-key}")
@@ -50,13 +58,13 @@ public class SystemInfoVectorDaoImpl implements SystemInfoVectorDao{
     @Value("${weaviate.consistency-level}")
     private String consistencyLevel;
 
-    @Value("${weaviate.metadata-keys}")
+    @Value("${weaviate.metadata-keys:}")
     private String metadataKeysString;
 
-    @Value("${weaviate.text-field}")
+    @Value("${weaviate.text-field:}")
     private String textFieldName;
 
-    @Value("${weaviate.metadata-field}")
+    @Value("${weaviate.metadata-field:}")
     private String metadataFieldName;
     
     @Value("${weaviate.minScore}")
@@ -71,6 +79,7 @@ public class SystemInfoVectorDaoImpl implements SystemInfoVectorDao{
 	public String get(RagModel model) throws ApiHubException {
 		
 		try {
+			
 			EmbeddingSearchRequest request = EmbeddingSearchRequest.builder()
 	                .queryEmbedding(model.getQueryVector())
 	                .minScore(minScore)
@@ -112,4 +121,19 @@ public class SystemInfoVectorDaoImpl implements SystemInfoVectorDao{
                 .build();
 
     }
+	
+	@Autowired
+	OllamaProviderService serv;
+	
+	public void save(GatewayRequest gatewayRequest) throws ApiHubException {
+		List<String> docs = new ArrayList<String>();
+		docs.add(gatewayRequest.getUserMessage());
+		List<TextSegment> segment = Utility.generateTextSegments( docs, 500, 150);
+		GatewayResponse res = serv.getEmbeddingResponse(gatewayRequest);
+		List<String> uuids = new ArrayList<String>(segment.size());
+		for(TextSegment seg : segment) {
+			uuids.add(UUID.randomUUID().toString());
+		}
+		store.addAll(uuids, res.getEmbeddingResponse().content(), segment);
+	}
 }

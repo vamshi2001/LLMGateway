@@ -1,20 +1,30 @@
 package com.api.hub.gateway.dao.impl;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
 
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Repository;
 
 import com.api.hub.exception.ApiHubException;
 import com.api.hub.exception.DatabaseException;
 import com.api.hub.gateway.dao.PromptVersionDao;
+import com.api.hub.gateway.model.PromptVersion;
+import com.api.hub.gateway.model.TollCallData;
 import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
 import jakarta.annotation.PostConstruct;
 
+@Repository
+@ConditionalOnProperty(name = "mongoDB.prompt.enabled", havingValue = "true")
 public class PromptVersionDaoImpl implements PromptVersionDao{
 
 	@Autowired
@@ -69,5 +79,34 @@ public class PromptVersionDaoImpl implements PromptVersionDao{
 		return "";
 	}
 
+	@Override
+	public void save(PromptVersion pojo) {
+		Document doc = new Document("persona", pojo.getPersona())
+                .append("phase", pojo.getPhase())
+                .append("prompt", pojo.getPrompt());
+
+        collection.insertOne(doc);
+	}
+
+	@Override
+	public List<PromptVersion> get() {
+		FindIterable<Document> documents = collection.find();
+		
+		List<PromptVersion> list = new ArrayList<PromptVersion>();
+		for (Document doc : documents) {
+	    	
+	        String persona = doc.getString("persona");
+	        String phase = doc.getString("phase");
+	        String prompt = doc.getString("prompt");
+	        //String previousData = fileSizeMap.get(toolName);
+	        
+	        PromptVersion data = new PromptVersion();
+        	data.setPersona(persona);
+        	data.setPhase(phase);
+        	data.setPrompt(prompt);
+        	list.add(data);
+		}
+		return list;
+	}
 	
 }

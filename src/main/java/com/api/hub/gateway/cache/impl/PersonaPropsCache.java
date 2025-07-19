@@ -7,28 +7,26 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-import com.api.hub.exception.ApiHubException;
 import com.api.hub.gateway.cache.AbstractCacheOperations;
-import com.api.hub.gateway.dao.WebSearchConfigDao;
-import com.api.hub.gateway.model.JsoupExtractionConfig;
+import com.api.hub.gateway.dao.PersonaDao;
+import com.api.hub.gateway.model.PersonaProperties;
 
-@Component("JsoupExtractionConfigCache")
+@Component("PersonaPropsCache")
 @ConditionalOnProperty(name = "cache.enabled", havingValue = "true")
-public class JsoupExtractionConfigCache  extends AbstractCacheOperations<String,JsoupExtractionConfig>{
+public class PersonaPropsCache extends AbstractCacheOperations<String,PersonaProperties>  {
 
 	@Autowired
-	private WebSearchConfigDao dao;
+	private PersonaDao dao;
 	
 	@Override
 	public boolean source() {
-		try {
-			List<JsoupExtractionConfig> configList = dao.get();
-			for(JsoupExtractionConfig config : configList) {
-				data.put(config.getHost(), config);
+		List<PersonaProperties> array = dao.get();
+		for(PersonaProperties prop : array) {
+			if(data.containsKey(prop.getPersona())) {
+				data.replace(prop.getPersona(), prop);
+			}else {
+				data.put(prop.getPersona(), prop);
 			}
-		} catch (ApiHubException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 		return false;
 	}
@@ -44,15 +42,14 @@ public class JsoupExtractionConfigCache  extends AbstractCacheOperations<String,
 		// TODO Auto-generated method stub
 		return false;
 	}
-
-	@Value("${cache.jsoupextraction.minrefreshtime.ms}")
-	private long minrefreshtime;
 	
+	@Value("${cache.persona.props.minrefreshtime.ms}")
+	private long minrefreshtime;
+
 	@Override
 	public long minRefreshTime() {
 		// TODO Auto-generated method stub
 		return minrefreshtime;
 	}
-	
 
 }

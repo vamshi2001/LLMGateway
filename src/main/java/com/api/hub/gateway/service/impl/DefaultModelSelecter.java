@@ -43,9 +43,20 @@ public class DefaultModelSelecter implements ModelSelecter{
 				
 				Provider provider = holder.getProvider(model.getProvider());
 				request.setModelName(model.getModelId());
-				res = provider.getChatResponse(request);
 				
-				holder.compute(model.getModelId(), res.getChatResponse().metadata(), avalible);
+				if(request.isPrompt()) {
+					
+				}else if(request.isEmbed()) {
+					res = provider.getEmbeddingResponse(request);
+				}else if(request.isModeration()) {
+					
+				}else if(request.getUserMessage() != null) {
+					res = provider.getChatResponse(request);
+				}else if(request.getUserImage() != null) {
+					
+				}
+				
+				holder.compute(model.getModelId(), res, avalible);
 				
 				return res;
 			}catch (Exception e) {
@@ -65,7 +76,7 @@ public class DefaultModelSelecter implements ModelSelecter{
 		if(request.isPrompt()) {
 			
 		}else if(request.isEmbed()) {
-			
+			modelsList = holder.getModels(ChatType.EMBEDDING);
 		}else if(request.isModeration()) {
 			
 		}else if(request.getUserMessage() != null) {

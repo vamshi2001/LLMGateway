@@ -18,7 +18,7 @@ public class ChatHistoryServiceImpl implements ChatHistoryService{
 	@Autowired
 	private ChatHistoryDao dao;
 	
-	@Value("nChats")
+	@Value("${nChats}")
 	private Integer nChats;
 	
 	@Override
