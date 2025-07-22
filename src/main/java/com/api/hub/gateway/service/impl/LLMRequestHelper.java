@@ -75,7 +75,7 @@ public class LLMRequestHelper {
 					 messages.add(SystemMessage.from(str));
 				}
 			}
-			
+			req.setMessages(messages);
 			if(gatewayRequest.getPersonaProps().isToolCallEnabled()) {
 				List<ToolSpecification>  toolSpec = personaMap.get(gatewayRequest.getPersona());
 				if(toolSpec != null && toolSpec.size()>0) {
@@ -89,7 +89,7 @@ public class LLMRequestHelper {
 			}
 			
 		}
-		return null;
+		return req;
 	}
 	
 	public void compute() {

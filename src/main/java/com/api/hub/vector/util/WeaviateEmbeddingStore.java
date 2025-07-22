@@ -321,6 +321,7 @@ public class WeaviateEmbeddingStore {
         }
         props.put("indexFilterable", true);
         props.put("indexSearchable", true);
+       // props.put("persona", segment.metadata().getString("persona"));
         return WeaviateObject
                 .builder()
                 .className(objectClass)

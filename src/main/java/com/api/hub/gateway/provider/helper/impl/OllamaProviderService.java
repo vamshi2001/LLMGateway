@@ -44,6 +44,7 @@ public class OllamaProviderService implements Provider {
 			List<String> docs = new ArrayList<String>();
 			docs.add(gatewayRequest.getUserMessage());
 			List<TextSegment> segment = Utility.generateTextSegments( docs, maxSegmentSizeInChars, maxOverlapSizeInChars);
+			gatewayRequest.setSegment(segment);
 			Response<List<Embedding>> embeding = embedModel.embedAll(segment);
 			
 			GatewayResponse res = new GatewayResponse();

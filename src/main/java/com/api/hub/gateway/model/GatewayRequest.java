@@ -6,6 +6,7 @@ import java.util.concurrent.Future;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import dev.langchain4j.data.segment.TextSegment;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -37,4 +38,6 @@ public class GatewayRequest {
     private Future<List<ChatHistory>> chatHistory;
     private String modelName;
     private List<String> skipModels = new ArrayList<String>();
+    
+    private List<TextSegment> segment;
 }

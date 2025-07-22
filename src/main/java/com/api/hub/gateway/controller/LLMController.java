@@ -14,8 +14,11 @@ import com.api.hub.exception.InputException;
 import com.api.hub.gateway.cache.Cache;
 import com.api.hub.gateway.dao.SystemInfoVectorDao;
 import com.api.hub.gateway.model.GatewayRequest;
+import com.api.hub.gateway.model.GatewayResponse;
 import com.api.hub.gateway.model.PersonaProperties;
 import com.api.hub.gateway.model.Pojo;
+import com.api.hub.gateway.model.RagModel;
+import com.api.hub.gateway.provider.helper.Provider;
 import com.api.hub.gateway.service.LLMGatewayService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,6 +36,9 @@ public class LLMController {
 	@Autowired
 	SystemInfoVectorDao dao;
 
+	@Autowired
+	@Qualifier("ollamaProvider")
+	Provider ollama;
 	// .setHttpClientBuilderFactory(new SpringRestClientBuilderFactory());
 
 	@Autowired
@@ -60,11 +66,19 @@ public class LLMController {
 	}
 	
 	@PostMapping(value = "v1/save", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<String> save(@RequestBody GatewayRequest req, HttpServletRequest request) {
+	public ResponseEntity<String> save(@RequestBody String doc, HttpServletRequest request) {
 		// req.setUserMessage("what is the result of 5 + 25");
 		
 		try {
-			dao.save(req);
+			GatewayRequest req = new GatewayRequest();
+			req.setUserMessage(doc);
+			GatewayResponse res = ollama.getEmbeddingResponse(req);
+			
+			RagModel rag = new RagModel();
+			rag.setEmbedings(res.getEmbeddingResponse().content());
+			rag.setSegment(req.getSegment());
+			rag.setPersona("default");
+			dao.save(rag);
 		} catch (ApiHubException e) {
 			// TODO Auto-generated catch block
 			return ResponseEntity.badRequest().body(e.getMsgToUser());

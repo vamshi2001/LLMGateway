@@ -8,6 +8,6 @@ public interface SystemInfoVectorDao {
 
 
 	public String get(RagModel model) throws ApiHubException;
-	
-	void save(GatewayRequest request) throws ApiHubException;
+
+	void save(RagModel rag) throws ApiHubException;
 }
