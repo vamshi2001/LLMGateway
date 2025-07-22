@@ -110,4 +110,5 @@ public interface MarkerConstants {
 
     /** static Marker for tracking user actions and interactions. */
     static Marker USER_ACTIVITY = MarkerFactory.getMarker("USER_ACTIVITY");
+
 }

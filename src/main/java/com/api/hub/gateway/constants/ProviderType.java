@@ -2,7 +2,8 @@ package com.api.hub.gateway.constants;
 
 public enum ProviderType {
 
-    OPENAI("OpenAI");
+    OPENAI("OpenAI"),
+    OLLAMA("Ollama");
 
     private final String label;
 

@@ -1,10 +1,12 @@
 package com.api.hub.gateway.dao;
 
-import org.bson.Document;
+import java.util.List;
 
-import com.mongodb.client.FindIterable;
+import com.api.hub.gateway.model.TollCallData;
 
 public interface ToolCallDao {
 
-	FindIterable<Document> get();
+	List<TollCallData> get();
+
+	void save(TollCallData data);
 }

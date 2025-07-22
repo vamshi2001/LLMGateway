@@ -20,6 +20,16 @@ public class Model {
 	
 	private boolean enable;
 	
+	private String topicsStr;
+	
+	public String getTopicsStr() {
+		return topicsStr;
+	}
+
+	public void setTopicsStr(String topicsStr) {
+		this.topicsStr = topicsStr;
+	}
+
 	private List<String> topics;
 
 	public void setTopicsFromString(String topicsStr) {

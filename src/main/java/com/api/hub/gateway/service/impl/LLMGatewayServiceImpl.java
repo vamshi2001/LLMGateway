@@ -1,23 +1,21 @@
 package com.api.hub.gateway.service.impl;
 
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import com.api.hub.exception.ApiHubException;
-import com.api.hub.gateway.LLMToolCallUtility;
+import com.api.hub.exception.InternalServerException;
 import com.api.hub.gateway.Utility;
-import com.api.hub.gateway.cache.Cache;
 import com.api.hub.gateway.model.ChatHistory;
 import com.api.hub.gateway.model.GatewayRequest;
-import com.api.hub.gateway.model.TollCallData;
+import com.api.hub.gateway.model.GatewayResponse;
 import com.api.hub.gateway.service.ChatHistoryService;
 import com.api.hub.gateway.service.LLMGatewayService;
+import com.api.hub.gateway.service.QueryRewriteService;
 import com.api.hub.gateway.service.SystemInfo;
 import com.api.hub.gateway.service.ToolCallService;
 
@@ -37,59 +35,82 @@ public class LLMGatewayServiceImpl implements LLMGatewayService{
 	private DefaultModelSelecter processor;
 	
 	@Autowired
-	@Qualifier("ToolCallCache")
-	Cache<String,TollCallData> toolCallCache;
+	private ToolCallService toolService;
 	
 	@Autowired
-	ToolCallService toolService;
+	private QueryRewriteService service;
 	
 	@Override
-	public String getResponse(GatewayRequest req) {
+	public String getResponse(GatewayRequest req) throws ApiHubException {
 		
-		Future<List<ChatHistory>> history = CompletableFuture.supplyAsync(() -> {
-			return chatHistory.getChatHistory(Utility.getChatType(req), req.getBotSessionid(), req.getMaxChatHistory());
-		});
+		if(req.getPersonaProps().isChatHistoryEnabled()) {
+			Future<List<ChatHistory>> history = CompletableFuture.supplyAsync(() -> {
+				try {
+					return chatHistory.getChatHistory(Utility.getChatType(req), req.getBotSessionid());
+				} catch (ApiHubException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				return null;
+			});
+			req.setChatHistory(history);
+		}
 		
-		req.setChatHistory(history);
-		if(req.isUseRAG()) {
+		if(req.getPersonaProps().isQueryRewriteEnabled()) {
+			String finialQuery = service.rewriteQuery(req);
+			if(finialQuery != null && !finialQuery.isBlank()) {
+				req.setUserMessage(finialQuery);
+				req.setUseChatHistory(false);
+			}
+		}
+		
+		if(req.getPersonaProps().isRagEnabled()) {
 			try {
-				List<String> info = systemInfo.getAdditionalInfo(req.getRagSource(),req.getUserMessage(),req.getChatHistory());
+				List<String> info = systemInfo.getAdditionalInfo(req);
 				if(info != null && info.size() > 0) {
 					req.getAdditionalInfo().addAll(info);
+				}else {
+					throw new InternalServerException("8001-rag-gateway", "in rag, system information is empty", "Failed to fetch System Information");
 				}
-			} catch (Exception e) {
-				
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			} catch (ApiHubException e) {
+				throw e;
 			}
 		}
 		AiMessage msg = null;
 		do {
 			if (msg != null && msg.hasToolExecutionRequests()){
 				for( ToolExecutionRequest toolRequest: msg.toolExecutionRequests()) {
-					String toolResult = handleToolCall(req,toolRequest.arguments(), toolCallCache.get(toolRequest.name()),"vamshi");
+					req.getAdditionalInfo().add(handleToolCall(req,toolRequest.arguments(), toolRequest.name(),"vamshi"));
 				}
 			}
-			msg = processor.getResponse(req);
-			if(msg != null && msg.text() != null && msg.text().length() > 0) {
-				ChatHistory his = new ChatHistory(req.getUserMessage(), msg.text(), null, req.getBotSessionid());
-				chatHistory.save(Utility.getChatType(req), his);
+			GatewayResponse res = processor.getResponse(req);
+			
+			if(res.getChatResponse() != null) {
+				if(msg != null && msg.text() != null && msg.text().length() > 0) {
+					ChatHistory his = new ChatHistory(req.getUserMessage(), msg.text(), null, req.getBotSessionid());
+					try {
+						chatHistory.save(Utility.getChatType(req), his);
+					}catch (ApiHubException e) {
+						//loggers
+					}
+				}
 			}
+			msg = res.getChatResponse().aiMessage();
+			
 		}while(msg != null && msg.hasToolExecutionRequests());
 		
 		
-		
-		return msg.text();
+		return msg!=null? msg.text(): "unable to process request";
 	}
 	
-	private String handleToolCall(GatewayRequest request, String body, TollCallData data, String userId) {
+	private String handleToolCall(GatewayRequest request, String body,String toolName, String userId) throws ApiHubException {
 		try {
-			return toolService.getResponse(request, body, data, userId);
+			return toolService.getResponse(request, body, toolName, userId);
 		} catch (ApiHubException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			throw e;
 		}
-		return "";
+		
 	}
 
 }

@@ -23,18 +23,15 @@ public class GatewayRequest {
     
     //optional
     private String botSessionid;
-    private boolean useRAG = false;
-    private String ragSource;
-    private Integer ragMaxResults = 3;
-    private Integer maxChatHistory = 3;
-    
-    private Integer maxFallBackModels = 1;
     private boolean isPrompt = false;
     private boolean isModeration = false;
     private boolean isEmbed = false;
-    private List<String> topics;
+    private String persona;
+    
+    private PersonaProperties personaProps;
     
     //data we populate
+    private boolean useChatHistory = false;
     private List<String> additionalInfo = new ArrayList<String>();
     private String requestId;
     private Future<List<ChatHistory>> chatHistory;

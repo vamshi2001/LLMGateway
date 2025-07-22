@@ -2,10 +2,13 @@ package com.api.hub.gateway.dao.impl;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -14,6 +17,7 @@ import com.api.hub.gateway.dao.ModelMetricDao;
 import com.api.hub.gateway.model.ModelMetric;
 
 @Repository
+@ConditionalOnProperty(name = "sql.model.metrics.enable", havingValue = "true")
 public class ModelMetricDaoImpl implements ModelMetricDao {
 
 	@Autowired
@@ -66,7 +70,10 @@ public class ModelMetricDaoImpl implements ModelMetricDao {
         public ModelMetric mapRow(ResultSet rs, int rowNum) throws SQLException {
         	
 	            ModelMetric metric = new ModelMetric();
-	            metric.setCurrentDate(rs.getDate("entry_date"));
+	            
+	            Timestamp timestamp = rs.getTimestamp("entry_date");
+	            Date utilDate = new Date(timestamp.getTime());  
+	            metric.setCurrentDate(utilDate);
 	            metric.setModelId(rs.getString("model_id"));
 	
 	            metric.setCurrentInputTokenConsumedPerDay(rs.getLong("current_input_token_day"));

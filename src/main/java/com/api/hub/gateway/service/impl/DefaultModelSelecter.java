@@ -8,14 +8,16 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.api.hub.exception.ApiHubException;
+import com.api.hub.exception.InternalServerException;
 import com.api.hub.gateway.constants.ChatType;
 import com.api.hub.gateway.model.GatewayRequest;
+import com.api.hub.gateway.model.GatewayResponse;
 import com.api.hub.gateway.model.Model;
 import com.api.hub.gateway.provider.helper.Provider;
 import com.api.hub.gateway.service.ModelSelecter;
 import com.api.hub.gateway.service.impl.LLMModelsHolder.AvalibleModel;
 
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.response.ChatResponse;
 
 @Component
@@ -25,10 +27,10 @@ public class DefaultModelSelecter implements ModelSelecter{
 	private LLMModelsHolder holder;
 	
 	@Override
-	public AiMessage getResponse(GatewayRequest request) {
+	public GatewayResponse getResponse(GatewayRequest request) throws ApiHubException {
 		
 		
-		Integer maxFallBack = request.getMaxFallBackModels();
+		Integer maxFallBack = request.getPersonaProps().getMaxFallBackModels();
 		List<String> modelsToSkip = request.getSkipModels();
 		do {
 			AvalibleModel avalible = getModel(request);
@@ -36,16 +38,27 @@ public class DefaultModelSelecter implements ModelSelecter{
 				continue;
 			}
 			Model model = avalible.getModel();
-			ChatResponse res = null;
+			GatewayResponse res = null;
 			try {
 				
 				Provider provider = holder.getProvider(model.getProvider());
 				request.setModelName(model.getModelId());
-				res = provider.getChatResponse(request);
 				
-				holder.compute(model.getModelId(), res.metadata(), avalible);
+				if(request.isPrompt()) {
+					
+				}else if(request.isEmbed()) {
+					res = provider.getEmbeddingResponse(request);
+				}else if(request.isModeration()) {
+					
+				}else if(request.getUserMessage() != null) {
+					res = provider.getChatResponse(request);
+				}else if(request.getUserImage() != null) {
+					
+				}
 				
-				return res.aiMessage();
+				holder.compute(model.getModelId(), res, avalible);
+				
+				return res;
 			}catch (Exception e) {
 				modelsToSkip.add(model.getModelId());
 				holder.failed(avalible);
@@ -53,7 +66,7 @@ public class DefaultModelSelecter implements ModelSelecter{
 			}
 		}while(maxFallBack-- > 0);
 		
-		return null;
+		throw new InternalServerException("8001-ai-gateway", "failed to find model for given request", "unable to find a model for given request");
 	}
 	
 	public AvalibleModel getModel(GatewayRequest request) {
@@ -63,13 +76,12 @@ public class DefaultModelSelecter implements ModelSelecter{
 		if(request.isPrompt()) {
 			
 		}else if(request.isEmbed()) {
-			
+			modelsList = holder.getModels(ChatType.EMBEDDING);
 		}else if(request.isModeration()) {
 			
 		}else if(request.getUserMessage() != null) {
 			modelsList = holder.getModels(ChatType.CHAT);
 		}else if(request.getUserImage() != null) {
-			
 			
 		}
 		
@@ -92,13 +104,13 @@ public class DefaultModelSelecter implements ModelSelecter{
 		}
 		
 		Set<String> topicSupportedModels = new HashSet<String>();
-		if(request.getTopics() != null) {
-			for(String topic : request.getTopics()) {
-				Set<String> modelsListTmp = holder.getTopicSupportedModels(topic);
-				if(modelsListTmp != null && modelsListTmp.size() > 0) {
-					topicSupportedModels.addAll(modelsListTmp);
-				}
+		if(request.getPersona() != null && !request.getPersona().isBlank()) {
+			
+			Set<String> modelsListTmp = holder.getTopicSupportedModels(request.getPersona());
+			if(modelsListTmp != null && modelsListTmp.size() > 0) {
+				topicSupportedModels.addAll(modelsListTmp);
 			}
+			
 		}
 		
 		if(topicSupportedModels.size() > 1) {

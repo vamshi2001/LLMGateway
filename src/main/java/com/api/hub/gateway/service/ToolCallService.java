@@ -6,5 +6,5 @@ import com.api.hub.gateway.model.TollCallData;
 
 public interface ToolCallService {
 
-	String getResponse(GatewayRequest request, String body, TollCallData toolName, String userId) throws ApiHubException;
+	String getResponse(GatewayRequest request, String body, String toolName, String userId) throws ApiHubException;
 }

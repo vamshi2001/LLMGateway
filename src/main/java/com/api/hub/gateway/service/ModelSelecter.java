@@ -1,11 +1,10 @@
 package com.api.hub.gateway.service;
 
+import com.api.hub.exception.ApiHubException;
 import com.api.hub.gateway.model.GatewayRequest;
-import com.api.hub.gateway.model.Model;
-
-import dev.langchain4j.data.message.AiMessage;
+import com.api.hub.gateway.model.GatewayResponse;
 
 public interface ModelSelecter {
 
-	AiMessage getResponse(GatewayRequest request);
+	GatewayResponse getResponse(GatewayRequest request) throws ApiHubException;
 }
