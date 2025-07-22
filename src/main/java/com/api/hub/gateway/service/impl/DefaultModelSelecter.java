@@ -116,7 +116,7 @@ public class DefaultModelSelecter implements ModelSelecter{
 		if(topicSupportedModels.size() > 1) {
 			modelsList = modelsList
 					.stream()
-					.filter(e -> !topicSupportedModels.contains(e))
+					.filter(e -> topicSupportedModels.contains(e))
 					.collect(Collectors.toSet());
 		}
 		

@@ -78,10 +78,11 @@
 	<%
 		String idx = "${idx}";
 		String dataHost = "${data.host || ''}";
+		String header = "${data.host || 'New Host Config'}";
 	%>
       wrapper.innerHTML = `
         <div class="p-4 cursor-pointer bg-blue-100 flex justify-between items-center" onclick="toggleConfig('config-<%=idx%>')">
-          <div><strong>${data.host || 'New Host Config'}</strong></div>
+          <div><strong><%=header%></strong></div>
           <span class="text-blue-600">▼</span>
         </div>
         <div id="config-<%=idx%>" class="p-4 hidden space-y-4">

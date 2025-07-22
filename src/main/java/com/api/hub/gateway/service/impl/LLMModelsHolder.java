@@ -164,13 +164,16 @@ public class LLMModelsHolder {
 			avalible.unlock();
 			return;
 		}
-		
 		ModelMetric modelMetric = avalible.getMetrics();
-		modelMetric.setCurrentInputTokenConsumedPerDay(usage.inputTokenCount());
-		modelMetric.setCurrentInputTokenConsumedPerMonth(usage.inputTokenCount());
+		if(usage != null) {
+			
+			modelMetric.setCurrentInputTokenConsumedPerDay(usage.inputTokenCount());
+			modelMetric.setCurrentInputTokenConsumedPerMonth(usage.inputTokenCount());
+			
+			modelMetric.setCurrentOutputTokenConsumedPerDay(usage.outputTokenCount());
+			modelMetric.setCurrentOutputTokenConsumedPerMonth(usage.outputTokenCount());
+		}
 		
-		modelMetric.setCurrentOutputTokenConsumedPerDay(usage.outputTokenCount());
-		modelMetric.setCurrentOutputTokenConsumedPerMonth(usage.outputTokenCount());
 		
 		if(!isAvailable(avalible.getModel(), modelMetric)) {
 			if(modelMetric.equals(modelMetricsCache.get(id))){

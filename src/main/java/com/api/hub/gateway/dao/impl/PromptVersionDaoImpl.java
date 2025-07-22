@@ -16,6 +16,7 @@ import com.api.hub.exception.DatabaseException;
 import com.api.hub.gateway.dao.PromptVersionDao;
 import com.api.hub.gateway.model.PromptVersion;
 import com.api.hub.gateway.model.TollCallData;
+import com.google.common.util.concurrent.AtomicDouble;
 import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
@@ -46,37 +47,45 @@ public class PromptVersionDaoImpl implements PromptVersionDao{
 		 try {
 			 Document searchStage = new Document("$search", new Document()
 		                .append("index", "default")
-		                .append("compound", new Document()
-		                    .append("must", Arrays.asList(
-		                        new Document("text", new Document()
-		                            .append("query", query)
-		                            .append("path", "prompt"))
-		                    ))
-		                    .append("filter", Arrays.asList(
-		                        new Document("equals", new Document()
-		                            .append("path", "persona")
-		                            .append("value", persona)),
-		                        new Document("equals", new Document()
-		                            .append("path", "phase")
-		                            .append("value", phase))
-		                    ))
-		                )
+		                .append("text", new Document()
+		                		.append("query", query)
+	                            .append("path", "prompt"))
+						 .append("text", new Document()
+			                		.append("query", persona)
+		                            .append("path", "persona"))
+						.append("text", new Document()
+							.append("query", phase)
+					        .append("path", "phase"))
 		            );
-		            // Execute the pipeline
-		            AggregateIterable<Document> results = collection.aggregate(Arrays.asList(
-		                searchStage,
-		                new Document("$limit", 1)
-		            ));
+		            
+			
+			 Document addScoreStage = new Document("$addFields", new Document(
+			     "score", new Document("$meta", "searchScore")
+			 ));
 
-		            // Print results
-		            for (Document doc : results) {
-		                return doc.getString("prompt");
-		            }
+			 
+			 Document sortStage = new Document("$sort", new Document("score", -1));
+
+
+			 
+			 List<Document> pipeline = Arrays.asList(searchStage, addScoreStage, sortStage);
+			 AggregateIterable<Document> results = collection.aggregate(pipeline);
+			 
+			
+			 StringBuffer buffer = new StringBuffer();
+			 AtomicDouble score = new AtomicDouble(0.0);
+			 results.forEach(e -> {
+				 if(Double.compare(score.get(), e.getDouble("score")) <= 0) {
+					 buffer.delete(0, buffer.length());
+					 buffer.append(e.getString("prompt"));
+					 score.set(e.getDouble("score"));
+				 }
+			 });
+				 return buffer.toString();
+			
 		 }catch (Exception e) {
 			throw DatabaseException.fromMongoException(e, "Unable to retrieve prompt for query " + query);
 		 }
-	            
-		return "";
 	}
 
 	@Override

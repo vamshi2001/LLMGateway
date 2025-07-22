@@ -188,11 +188,36 @@ public class WebController {
 
 	@PostMapping(value = "/websearch", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
 	public ModelAndView websearch(
-		    @RequestParam String host,
-		    @RequestParam List<String> ruleTypes,
-		    @RequestParam List<String> ruleValues,
-		    @RequestParam List<Boolean> ruleAll
+		    @RequestParam("host") String host,
+		    @RequestParam("ruleTypes") String formRuleTypes,
+		    @RequestParam("ruleValues") String fomrRuleValues,
+		    @RequestParam("ruleAll") String formRuleAll
 		) {
+		
+		List<String> ruleTypes = new ArrayList<String>();
+		if(formRuleTypes != null && !formRuleTypes.isBlank()) {
+			String split[] = formRuleTypes.split(",");
+			for(String x : split){
+				ruleTypes.add(x);
+			}
+		}
+		
+		List<String> ruleValues =  new ArrayList<String>();
+		if(fomrRuleValues != null && !fomrRuleValues.isBlank()) {
+			String split[] = fomrRuleValues.split(",");
+			for(String x : split){
+				ruleValues.add(x);
+			}
+		}
+		
+		List<Boolean> ruleAll =  new ArrayList<Boolean>();
+		if(formRuleAll != null && !formRuleAll.isBlank()) {
+			String split[] = formRuleAll.split(",");
+			for(String x : split){
+				ruleAll.add(Boolean.parseBoolean(x));
+			}
+		}
+		
 		    // Build JsoupExtractionConfig and process it
 		    List<ExtractionRule> rules = new ArrayList<>();
 		    for (int i = 0; i < ruleTypes.size(); i++) {

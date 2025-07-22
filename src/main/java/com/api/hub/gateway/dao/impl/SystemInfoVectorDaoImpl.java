@@ -125,15 +125,14 @@ public class SystemInfoVectorDaoImpl implements SystemInfoVectorDao{
 	@Autowired
 	OllamaProviderService serv;
 	
-	public void save(GatewayRequest gatewayRequest) throws ApiHubException {
-		List<String> docs = new ArrayList<String>();
-		docs.add(gatewayRequest.getUserMessage());
-		List<TextSegment> segment = Utility.generateTextSegments( docs, 500, 150);
-		GatewayResponse res = serv.getEmbeddingResponse(gatewayRequest);
-		List<String> uuids = new ArrayList<String>(segment.size());
-		for(TextSegment seg : segment) {
+	@Override
+	public void save(RagModel rag) throws ApiHubException {
+		
+		List<String> uuids = new ArrayList<String>(rag.getSegment().size());
+		for(TextSegment seg : rag.getSegment()) {
+			seg.metadata().put("persona", rag.getPersona());
 			uuids.add(UUID.randomUUID().toString());
 		}
-		store.addAll(uuids, res.getEmbeddingResponse().content(), segment);
+		store.addAll(uuids, rag.getEmbedings(), rag.getSegment());
 	}
 }
