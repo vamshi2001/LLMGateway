@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LLM Gateway Configuration Docs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans leading-relaxed">
+  <div class="max-w-6xl mx-auto p-6">
+    <h1 class="text-3xl font-bold text-blue-600 mb-4">🔧 LLM Gateway UI Configuration</h1>
+    <p class="text-slate-700 mb-6">The <code class="bg-slate-100 px-1 rounded">LLMConfig.html</code> file provides a central UI to configure model behavior, persona pipelines, tool calls, and prompt logic. Each section interacts with either SQL or MongoDB to drive your LLM Gateway logic.</p>
+
+    <div class="grid gap-6">
+      
+      <!-- Model Metadata -->
+      <section class="bg-white rounded-lg shadow border p-6">
+        <h2 class="text-xl font-semibold text-sky-700 mb-2">📌 1. Model Metadata <span class="bg-blue-100 text-blue-800 text-xs font-semibold ml-2 px-2 py-1 rounded">SQL DB</span></h2>
+        <p class="mb-2">Defines core properties and limits for each registered model.</p>
+        <ul class="list-disc pl-6">
+          <li><code>modelId</code>: Unique identifier</li>
+          <li><code>provider</code>: e.g. OpenAI, Ollama</li>
+          <li><code>modelName</code>, <code>type</code>, <code>rank</code>: Technical specs</li>
+          <li><code>maxTokenDay/Month</code>, <code>maxRequestDay/Month</code></li>
+          <li><code>enable</code>: Model status</li>
+          <li><code>topicsStr</code>: Comma-separated personas this model supports</li>
+        </ul>
+      </section>
+
+      <!-- Model Metrics -->
+      <section class="bg-white rounded-lg shadow border p-6">
+        <h2 class="text-xl font-semibold text-sky-700 mb-2">📊 2. Model Metrics <span class="bg-blue-100 text-blue-800 text-xs font-semibold ml-2 px-2 py-1 rounded">SQL DB</span></h2>
+        <p class="mb-2">Real-time usage and limits tracking for each model.</p>
+        <ul class="list-disc pl-6">
+          <li><code>currentInput/OutputTokenConsumedPerDay/Month</code></li>
+          <li><code>currentActiveRequest</code>, <code>totalFailuresToday</code></li>
+          <li>Enables fallback, usage enforcement</li>
+        </ul>
+      </section>
+
+      <!-- Persona Properties -->
+      <section class="bg-white rounded-lg shadow border p-6">
+        <h2 class="text-xl font-semibold text-sky-700 mb-2">👤 3. Persona Properties <span class="bg-blue-100 text-blue-800 text-xs font-semibold ml-2 px-2 py-1 rounded">SQL DB</span></h2>
+        <p class="mb-2">Controls per-persona pipeline options like RAG, tools, history, etc.</p>
+        <ul class="list-disc pl-6">
+          <li><code>chatHistoryEnabled</code>, <code>queryRewriteEnabled</code>, <code>ragEnabled</code></li>
+          <li><code>toolCallEnabled</code>, <code>ragSource</code>, <code>toolChoice</code></li>
+          <li>Enables selective pipeline flow logic per persona</li>
+        </ul>
+      </section>
+
+      <!-- Model Properties -->
+      <section class="bg-white rounded-lg shadow border p-6">
+        <h2 class="text-xl font-semibold text-sky-700 mb-2">⚙️ 4. Model Properties <span class="bg-green-100 text-green-800 text-xs font-semibold ml-2 px-2 py-1 rounded">MongoDB</span></h2>
+        <p class="mb-2">Base64 encoded config to inject headers, auth, params during model API call.</p>
+        <ul class="list-disc pl-6">
+          <li><code>modelId</code>, <code>props</code> (Base64 config)</li>
+        </ul>
+      </section>
+
+      <!-- Web Search -->
+      <section class="bg-white rounded-lg shadow border p-6">
+        <h2 class="text-xl font-semibold text-sky-700 mb-2">🌐 5. Web Search Rules <span class="bg-green-100 text-green-800 text-xs font-semibold ml-2 px-2 py-1 rounded">MongoDB</span></h2>
+        <p class="mb-2">HTML scraping configuration per domain using JSoup rules.</p>
+        <ul class="list-disc pl-6">
+          <li><code>host</code>: Target domain</li>
+          <li><code>rules</code>: List of extraction rules (id, class, tag, selector)</li>
+          <li><code>all</code>: Whether to extract all matches or just the first</li>
+        </ul>
+      </section>
+
+      <!-- Tool Call -->
+      <section class="bg-white rounded-lg shadow border p-6">
+        <h2 class="text-xl font-semibold text-sky-700 mb-2">🔧 6. Tool Call Metadata <span class="bg-green-100 text-green-800 text-xs font-semibold ml-2 px-2 py-1 rounded">MongoDB</span></h2>
+        <p class="mb-2">Defines MCP tools, argument schemas and persona restrictions.</p>
+        <ul class="list-disc pl-6">
+          <li><code>toolName</code>, <code>toolDescription</code>, <code>endPoint</code></li>
+          <li><code>toolArguments</code>, <code>supportedPersona</code>, <code>toolSpecification</code></li>
+        </ul>
+      </section>
+
+      <!-- Prompt Versions -->
+      <section class="bg-white rounded-lg shadow border p-6">
+        <h2 class="text-xl font-semibold text-sky-700 mb-2">🧾 7. Prompt Versions <span class="bg-green-100 text-green-800 text-xs font-semibold ml-2 px-2 py-1 rounded">MongoDB</span></h2>
+        <p class="mb-2">Different prompts mapped to persona and pipeline phase.</p>
+        <ul class="list-disc pl-6">
+          <li><code>persona</code>, <code>phase</code>, <code>prompt</code></li>
+          <li>Used in query rewriting, RAG prep, and LLM calls</li>
+        </ul>
+      </section>
+
+      <!-- Switch Explanation -->
+      <section class="bg-white rounded-lg shadow border p-6">
+        <h2 class="text-xl font-semibold text-orange-600 mb-2">🪛 #switch: Plug & Play Config</h2>
+        <p class="mb-2">The <code>#switch</code> mechanism allows toggling off default implementations for DB, websearch, etc. and injecting your own handlers. Useful for extending or disabling features without breaking the gateway.</p>
+        <ul class="list-disc pl-6">
+          <li>All classes that interact with external systems are behind a switch</li>
+          <li>Examples: disable SQL and inject Redis, bypass websearch, etc.</li>
+          <li>Handled using properties or `@Conditional` style flags in Spring Boot</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</body>
+</html>
